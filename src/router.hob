@@ -20,7 +20,7 @@ public type &Handler = fun (Request) -> Response;
 public type Route = struct {
     kind: RouteKind,
     path: string,
-    content: struct { # TODO: unions
+    content: union {
         router: *Router,
         handler: struct {
             method: string,
@@ -77,7 +77,6 @@ public fun Router.handler(&self, method: string, path: string, handler: Handler)
         kind: RouteKind.handler,
         path: path,
         content: {
-            router: undefined,
             handler: {
                 fn: handler,
                 method: method,
@@ -94,7 +93,6 @@ public fun Router.nest(&self, path: string, inner: *Router) -> *Router {
         path: path,
         content: {
             router: inner,
-            handler: undefined,
         },
     });
     return router;
