@@ -1,4 +1,80 @@
+import io;
+import std;
+import netSocket;
 import commonHttp;
-
+import result;
 public import "src/router.hob" as router;
+public import "src/bodies.hob" as bodies;
 public import "src/pathIter.hob" as pathIter;
+
+use commonHttp.parser.Parser;
+use result.NoneResult;
+
+public type Server = struct {
+    router: *router.Router,
+};
+
+public fun new(router: *router.Router) -> Server {
+    return { router: router };
+}
+
+const BUFFER_SIZE: usize = 1024;
+
+public fun Server.listen(&self, port: u16) -> NoneResult {
+    final socketRes = netSocket.bind(port, 16);
+    if !socketRes.isOk {
+        return socketRes.convertErr.<std.None>();
+    }
+    final socket = socketRes.unwrap();
+    while.outer true {
+        final clientRes = socket.accept();
+        if !clientRes.isOk {
+            continue;
+        }
+        final client = clientRes.unwrap();
+        defer client.socket.close();
+        var parser = commonHttp.parser.new();
+        defer parser.free();
+        var buffer: [BUFFER_SIZE]u8;
+        do {
+            final sliceRes = client.socket.readTo(std.slice.new.<u8>(&buffer[0], buffer.length));
+            if !sliceRes.isOk {
+                continue outer;
+            }
+            final slice = sliceRes.unwrap();
+            parser.put(slice as ?);
+            if slice.length == 0 || slice.length < BUFFER_SIZE {
+                break;
+            }
+        } while true;
+        if !parser.finished() {
+            io.out.putString("failed to parse request\n");
+            continue;
+        }
+        var request = parser.request();
+
+        defer request.free();
+        io.out.putString(request.path);
+        final optHandler = self.router.resolve(request.method, pathIter.new(request.path));
+        if optHandler.isEmpty {
+            io.out.putString(": not found!\n");
+            continue;
+        }
+        io.out.putString(": respond!\n");
+
+        var response = optHandler.value(request);
+        defer response.free();
+        var sender = commonHttp.sender.new(response);
+
+        var head = sender.head();
+        defer head.free();
+
+        client.socket.putString(head.toString());
+        sender.sendBody(client.socket);
+    }
+    std.panic.panic("unreachable"); # FIX: loops control flow
+}
+
+public fun Server.free(self) {
+    self.router.free();
+}

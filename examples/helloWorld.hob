@@ -1,0 +1,28 @@
+import os;
+import commonHttp;
+import "../lib.hob" as httpServer;
+
+use commonHttp.response.{ StatusCode };
+use httpServer.router;
+
+const HTML: string = "<!DOCTYPE html>
+<html>
+    <title>Hello!</title>
+    <body>
+        <h1>Welcome to hoblang!</h1>
+        <p>Looks like you're using <b>httpServer</b> library...</p>
+    </body>
+</html>";
+
+global fun main() -> i32 {
+    return os.mainWithoutArgs(fun () {
+        var server = httpServer.new(router.new().handler("GET", "/hello", fun (request) {
+            return commonHttp.responseBuilder.new(StatusCode.ok)
+                .header("Content-Type", "text/html")
+                .body(httpServer.bodies.fromString(HTML));
+        }));
+        server.listen(8080);
+        server.free();
+        return 0;
+    });
+}

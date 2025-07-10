@@ -4,3 +4,6 @@
 [submodule "lib/test"]
 	path = lib/test
 	url = https://github.com/hoblang/test
+[submodule "lib/netSocket"]
+	path = lib/netSocket
+	url = https://github.com/hoblang/netSocket

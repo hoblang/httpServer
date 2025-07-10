@@ -1,0 +1,9 @@
+import commonHttp;
+use commonHttp.response.{ newBody, Body };
+
+public fun fromString(data: string) -> Body {
+    return newBody.<string>(data, fun (fd, data) {
+        fd.putString(data.*);
+    }, fun (data) {});
+}
+
