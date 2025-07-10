@@ -1,0 +1,11 @@
+import os;
+import "test/pathIter.hob" as pathIter;
+import "test/router.hob" as router;
+
+global fun main() -> i32 {
+    return os.mainWithoutArgs(fun () {
+        pathIter.tests();
+        router.tests();
+        return 1;
+    });
+}

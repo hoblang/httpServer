@@ -1,0 +1,6 @@
+[submodule "lib/commonHttp"]
+	path = lib/commonHttp
+	url = https://github.com/hoblang/commonHttp
+[submodule "lib/test"]
+	path = lib/test
+	url = https://github.com/hoblang/test

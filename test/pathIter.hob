@@ -1,0 +1,48 @@
+import std;
+import test;
+import "../lib.hob" as httpServer;
+
+use std.slice.Slice;
+use httpServer.pathIter;
+
+fun testCase(path: string, segments: Slice.<string>) -> bool {
+    var i: usize = 0;
+    for segment in pathIter.new(path) {
+        std.panic.assert(i < segments.length, "too much segments");
+        std.panic.assert(segment.equals(segments.at(i)), "invalid segment");
+        i += 1;
+    }
+    std.panic.assert(i == segments.length, "expected more segments");
+    return true;
+}
+
+public fun tests() {
+    test.case("empty path", fun () {
+        var segments = <string>[""];
+        return testCase("", std.slice.new.<string>(&segments[0], segments.length));
+    });
+
+    test.case("path /", fun () {
+        var segments = <string>[""];
+        return testCase("/", std.slice.new.<string>(&segments[0], segments.length));
+    });
+
+    test.case("path /hello/world", fun () {
+        var segments = <string>["hello", "world"];
+        return testCase("/hello/world", std.slice.new.<string>(&segments[0], segments.length));
+    });
+
+    test.case("path /hello/world/", fun () {
+        var segments = <string>["hello", "world", ""];
+        return testCase("/hello/world/", std.slice.new.<string>(&segments[0], segments.length));
+    });
+
+    test.case("path /hello/world is subpath of /hello/world/lol", fun () {
+        var subpath = pathIter.new("/hello/world/lol");
+        std.panic.assert(pathIter.new("/hello/world").isSubpath(&subpath), "is not a subpath");
+        std.panic.assert(subpath.next(), "no reminder");
+        std.panic.assert(subpath.getCurrent().equals("lol"), "invalid reminder");
+        std.panic.assert(!subpath.next(), "too big reminder");
+        return true;
+    });
+}

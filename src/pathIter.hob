@@ -1,0 +1,45 @@
+public type PathIterator = struct {
+    path: string,
+    segment: string,
+    position: usize,
+};
+
+public fun new(path: string) -> PathIterator {
+    var position: usize = 0;
+    if path.length > 0 && path.at(0) == '/' {
+        position += 1;
+    }
+    return {
+        path: path,
+        segment: undefined,
+        position: position,
+    };
+}
+
+public fun PathIterator.next(&self) -> bool {
+    if self.position > self.path.length {
+        return false;
+    }
+
+    final startPos = self.position;
+    while self.position < self.path.length && self.path.at(self.position) != '/' {
+        self.position += 1;
+    }
+    var endPos = self.position;
+    self.position += 1;
+    self.segment = self.path.subslice(startPos, endPos) as ?;
+    return true;
+}
+
+public fun PathIterator.isSubpath(self, other: *PathIterator) -> bool {
+    for segment in self {
+        if !other.next() || !other.getCurrent().equals(segment) {
+            return false;
+        } 
+    }
+    return true;
+}
+
+public fun PathIterator.getCurrent(&self) -> string {
+    return self.segment;
+}

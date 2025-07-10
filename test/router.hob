@@ -1,0 +1,23 @@
+import test;
+import commonHttp;
+import "../lib.hob" as httpServer;
+
+use commonHttp.{ response.StatusCode, responseBuilder };
+
+public fun tests() {
+    test.case("attaching multi-segment path", fun () {
+        var router = httpServer.router.new()
+            .nest("/super/duper", httpServer.router.new()
+                .handler("GET", "/lol", fun (request) {
+                    return responseBuilder.new(StatusCode.ok).build();
+                })
+            )
+            .handler("POST", "/lol", fun (request) {
+                return responseBuilder.new(StatusCode.notImplemented).build();
+            });
+        defer router.free();
+        router.resolve("GET", httpServer.pathIter.new("super/duper/lol")).unwrap();
+        router.resolve("POST", httpServer.pathIter.new("/lol")).unwrap();
+        return true;
+    });
+}

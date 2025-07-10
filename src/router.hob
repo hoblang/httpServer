@@ -1,0 +1,101 @@
+import std;
+import mem;
+import list;
+import commonHttp;
+import optional;
+import "pathIter.hob" as pathIter;
+
+use list.List;
+use commonHttp.{
+    request.Request, 
+    response.Response, 
+};
+use optional.Optional;
+use pathIter.PathIterator;
+
+public type RouteKind = enum { router, handler };
+
+public type &Handler = fun (Request) -> Response;
+
+public type Route = struct {
+    kind: RouteKind,
+    path: string,
+    content: struct { # TODO: unions
+        router: *Router,
+        handler: struct {
+            method: string,
+            fn: Handler,
+        },
+    },
+};
+
+public type Router = struct {
+    routes: List.<Route>,
+};
+
+public fun new() -> *Router {
+    return mem.allocateWith.<Router>({ routes: list.new.<Route>() });
+}
+
+public fun Router.free(&self) {
+    for i in std.range(self.routes.length()) {
+        final route = self.routes.at(i);
+        if route.kind == RouteKind.router {
+            route.content.router.free();
+        }
+    }
+    self.routes.free();
+}
+
+public fun Router.resolve(&self, method: string, pathIterator: PathIterator) -> Optional.<Handler> {
+    for i in std.range(self.routes.length()) {
+        final route = self.routes.at(i);
+        final routePath = pathIter.new(route.path);
+        var subpath = pathIterator;
+        if !routePath.isSubpath(&subpath) {
+            continue;
+        }
+        if route.kind == RouteKind.router {
+            final resolved = route.content.router.resolve(method, subpath);
+            if !resolved.isEmpty {
+                return resolved;
+            }
+        } else if route.kind == RouteKind.handler {
+            if !subpath.next() && route.content.handler.method.equals(method) {
+                return optional.some.<Handler>(route.content.handler.fn);
+            }
+        } else {
+            std.panic.panic("unreachable");
+        }
+    }
+    return optional.none.<Handler>();
+}
+
+public fun Router.handler(&self, method: string, path: string, handler: Handler) -> *Router {
+    var router = self;
+    router.routes.push({
+        kind: RouteKind.handler,
+        path: path,
+        content: {
+            router: undefined,
+            handler: {
+                fn: handler,
+                method: method,
+            },
+        },
+    });
+    return router;
+}
+
+public fun Router.nest(&self, path: string, inner: *Router) -> *Router {
+    var router = self;
+    router.routes.push({
+        kind: RouteKind.router,
+        path: path,
+        content: {
+            router: inner,
+            handler: undefined,
+        },
+    });
+    return router;
+}
